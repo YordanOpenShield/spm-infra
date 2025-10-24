@@ -1,0 +1,5 @@
+${file("${module_path}/templates/common.yml.tftpl")}
+
+runcmd:
+  - ufw allow 9200:9300/tcp
+  - ufw enable

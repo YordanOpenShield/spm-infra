@@ -9,6 +9,22 @@ variable "hetzner_token" {
 }
 
 # ============================================================
+# Backend Variables
+# ============================================================
+
+variable "backend_cpu" {
+    description = "Number of CPU cores for the backend server"
+    type        = number
+    default     = 2
+}
+
+variable "backend_ram" {
+    description = "Amount of RAM for the backend server"
+    type        = number
+    default     = 4
+}
+
+# ============================================================
 # Postgres Variables
 # ============================================================
 
@@ -44,4 +60,18 @@ variable "opensearch_node_count" {
     description = "Number of OpenSearch nodes to deploy"
     type        = number
     default     = 2
+}
+
+# ============================================================
+# Deployment Variables
+# ============================================================
+
+variable "provision_user" {
+    description = "Username for the provisioned user on servers"
+    type        = string
+}
+
+variable "provision_ssh_port" {
+    description = "SSH port for the provisioned user on servers"
+    type        = number
 }

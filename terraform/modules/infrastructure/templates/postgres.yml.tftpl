@@ -1,0 +1,13 @@
+#cloud-config
+${file("${module_path}/templates/common.yml.tftpl")}
+
+packages:
+  - postgresql
+  - postgresql-contrib
+package_update: true
+package_upgrade: true
+runcmd:
+  - systemctl start postgresql
+  - systemctl enable postgresql
+  - ufw allow 5432
+  - ufw enable

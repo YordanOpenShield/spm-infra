@@ -1,0 +1,6 @@
+${file("${module_path}/templates/common.yml.tftpl")}
+
+runcmd:
+  - ufw allow http
+  - ufw allow https
+  - ufw enable

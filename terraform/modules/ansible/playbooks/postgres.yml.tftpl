@@ -1,0 +1,94 @@
+---
+# Ansible playbook to install and configure PostgreSQL
+# This is a terraform template (tftpl). It expects the calling module to pass
+# `module_path` so we can include shared templates if needed.
+
+- hosts: ${provision_host}:${provision_port}
+  remote_user: ${provision_user}
+  become: true
+  vars:
+    postgres_version: ${postgres_version}
+    postgres_listen_address: '0.0.0.0'
+    postgres_port: 5432
+    postgres_db: ${postgres_db}
+    postgres_user: ${postgres_user}
+    postgres_password: ${postgres_password}
+
+  pre_tasks:
+    - name: Include common package/user setup from cloud-init template
+      debug:
+        msg: "This playbook assumes the target image already has the cloud-init setup from common.yml.tftpl applied."
+
+  tasks:
+    - name: Ensure apt cache is up to date
+      apt:
+        update_cache: yes
+
+    - name: Install postgresql and dependencies
+      apt:
+        name:
+          - postgresql
+          - postgresql-contrib
+          - postgresql-server
+        state: present
+
+    - name: Ensure PostgreSQL service is started and enabled
+      service:
+        name: postgresql
+        state: started
+        enabled: yes
+
+    - name: Wait for PostgreSQL to be available on port {{ postgres_port }}
+      wait_for:
+        host: 127.0.0.1
+        port: "{{ postgres_port }}"
+        timeout: 60
+
+    - name: Set PostgreSQL listen_addresses
+      become_user: postgres
+      lineinfile:
+        path: "/etc/postgresql/*/main/postgresql.conf"
+        regexp: '^#?listen_addresses\s*=.*'
+        line: "listen_addresses = '{{ postgres_listen_address }}'"
+        backrefs: no
+
+    - name: Allow remote connections in pg_hba.conf (md5)
+      become_user: postgres
+      lineinfile:
+        path: "/etc/postgresql/*/main/pg_hba.conf"
+        insertafter: EOF
+        line: "host    all             all             0.0.0.0/0               md5"
+        state: present
+
+    - name: Restart PostgreSQL to apply configuration
+      service:
+        name: postgresql
+        state: restarted
+
+    - name: Ensure postgres role exists
+      become_user: postgres
+      postgresql_user:
+        name: "{{ postgres_user }}"
+        password: "{{ postgres_password }}"
+        priv: "ALL"
+        state: present
+
+    - name: Ensure database exists
+      become_user: postgres
+      postgresql_db:
+        name: "{{ postgres_db }}"
+        owner: "{{ postgres_user }}"
+        encoding: UTF8
+        state: present
+
+    - name: Ensure UFW allows postgres port
+      ufw:
+        rule: allow
+        port: "{{ postgres_port }}"
+        proto: tcp
+
+  handlers:
+    - name: restart postgresql
+      service:
+        name: postgresql
+        state: restarted
